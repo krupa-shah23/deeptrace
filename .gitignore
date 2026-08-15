@@ -23,3 +23,5 @@ Thumbs.db
 *.avi
 *.wav
 !data/seed_clips/.gitkeep
+
+*.png
