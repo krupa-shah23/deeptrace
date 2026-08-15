@@ -168,41 +168,48 @@ def extract_acoustic_replay_features(y: np.ndarray, sr: int) -> Tuple[np.ndarray
     - Spectral Flatness & Spectral Rolloff
     - Comb filtering index (spectral autocorrelation peak ratio)
     """
-    # 1. Reverberation / T60 proxy via Energy Decay Curve (EDC)
-    # Compute short-term energy
+    # 1. Reverberation / T60 decay proxy from speech pause decay rates
     hop = 160
     frame_len = 320
     energy = np.array([
         np.sum(y[i:i + frame_len] ** 2)
         for i in range(0, len(y) - frame_len, hop)
     ])
-    if len(energy) > 10:
-        # Backward integration (Schroeder integration)
-        schroeder_edc = np.cumsum(energy[::-1])[::-1]
-        schroeder_edc_db = 10 * np.log10(schroeder_edc / (np.max(schroeder_edc) + 1e-10) + 1e-10)
+    max_energy = np.max(energy) if len(energy) > 0 else 1e-10
 
-        # Estimate T60 from slope between -5 dB and -25 dB (EDT / T20 extension)
-        valid_idx = np.where((schroeder_edc_db <= -5) & (schroeder_edc_db >= -25))[0]
-        if len(valid_idx) > 2:
-            times = valid_idx * (hop / float(sr))
-            slope, _, _, _, _ = stats.linregress(times, schroeder_edc_db[valid_idx])
-            t60_est = float(-60.0 / slope) if slope < -1e-5 else 0.05
+    if len(energy) > 20 and max_energy > 1e-8:
+        # Convert energy to dB relative to peak frame energy
+        energy_db = 10 * np.log10(energy / max_energy + 1e-10)
+
+        # Find frame energy drops after speech energy peaks (> -6 dB)
+        decay_times = []
+        for i in range(1, len(energy_db) - 10):
+            if energy_db[i] > -6.0:  # Peak frame
+                # Measure frames until energy drops by 20 dB (down to -26 dB)
+                for j in range(i + 1, min(i + 40, len(energy_db))):
+                    if energy_db[j] <= -26.0:
+                        decay_sec = (j - i) * (hop / float(sr))
+                        # T60 is 3x the T20 decay duration
+                        decay_times.append(3.0 * decay_sec)
+                        break
+
+        if len(decay_times) > 0:
+            t60_est = float(np.median(decay_times))
         else:
-            t60_est = 0.05
+            t60_est = 0.08
     else:
-        t60_est = 0.05
+        t60_est = 0.08
 
-    # Clamp T60 proxy to realistic physical bounds [0.0, 3.0s]
-    t60_est = float(np.clip(t60_est, 0.0, 3.0))
+    # Clamp T60 proxy to realistic physical bounds [0.05, 3.0s]
+    t60_est = float(np.clip(t60_est, 0.05, 3.0))
 
-    # 2. Noise floor (dB) and SNR (dB)
-    # Estimate noise floor from bottom 10th percentile frame energy
-    if len(energy) > 5:
+    # 2. Noise floor (dB relative to peak) and SNR (dB)
+    if len(energy) > 5 and max_energy > 1e-8:
         sorted_energy = np.sort(energy)
         noise_energy = np.mean(sorted_energy[:max(1, int(len(sorted_energy) * 0.10))])
         signal_energy = np.mean(sorted_energy[int(len(sorted_energy) * 0.50):])
 
-        noise_floor_db = float(10 * np.log10(noise_energy + 1e-10))
+        noise_floor_db = float(10 * np.log10((noise_energy + 1e-10) / max_energy))
         snr_db = float(10 * np.log10((signal_energy + 1e-10) / (noise_energy + 1e-10)))
     else:
         noise_floor_db = -60.0
@@ -216,16 +223,18 @@ def extract_acoustic_replay_features(y: np.ndarray, sr: int) -> Tuple[np.ndarray
     mean_rolloff = float(np.mean(rolloff)) if rolloff.size > 0 else 0.0
 
     # 4. Comb Filtering Index
-    # Re-recording through speaker-room-mic path leaves periodic spectral notch ripples
+    # Re-recording through speaker-room-mic path leaves periodic spectral notch ripples.
+    # Subtract smooth spectral envelope (kernel=31) to remove natural pitch harmonic peaks.
     S = np.abs(librosa.stft(y))
     avg_spec = np.mean(S, axis=1)
-    if len(avg_spec) > 20:
-        autocorr_spec = np.correlate(avg_spec - np.mean(avg_spec), avg_spec - np.mean(avg_spec), mode='full')
+    if len(avg_spec) > 50:
+        smooth_spec = signal.medfilt(avg_spec, kernel_size=31)
+        spec_residual = avg_spec - smooth_spec
+        autocorr_spec = np.correlate(spec_residual, spec_residual, mode='full')
         autocorr_spec = autocorr_spec[len(autocorr_spec) // 2:]
         if autocorr_spec[0] > 1e-6:
             autocorr_spec /= autocorr_spec[0]
-            # Secondary peak in spectral autocorrelation indicates comb filtering
-            comb_filter_index = float(np.max(autocorr_spec[3:50])) if len(autocorr_spec) > 50 else 0.0
+            comb_filter_index = float(np.max(autocorr_spec[5:60]))
         else:
             comb_filter_index = 0.0
     else:

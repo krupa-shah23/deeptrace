@@ -3,11 +3,18 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from src.p_audio.config import PAudioConfig
-from src.p_audio.f1_zero_day.detector import F1ZeroDayDetector
-from src.p_audio.f2_replay.detector import F2ReplayDetector
-from src.p_audio.features import extract_all_audio_features
-from src.p_audio.preprocess import load_and_preprocess_audio
+try:
+    from p_audio.config import PAudioConfig
+    from p_audio.f1_zero_day.detector import F1ZeroDayDetector
+    from p_audio.f2_replay.detector import F2ReplayDetector
+    from p_audio.features import extract_all_audio_features
+    from p_audio.preprocess import load_and_preprocess_audio
+except ImportError:
+    from src.p_audio.config import PAudioConfig
+    from src.p_audio.f1_zero_day.detector import F1ZeroDayDetector
+    from src.p_audio.f2_replay.detector import F2ReplayDetector
+    from src.p_audio.features import extract_all_audio_features
+    from src.p_audio.preprocess import load_and_preprocess_audio
 
 
 class PAudioPipeline:

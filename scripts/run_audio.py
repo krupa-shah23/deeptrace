@@ -3,10 +3,13 @@ import json
 import sys
 from pathlib import Path
 
-# Add project root to sys.path
+# Add project root and src to sys.path
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+src_dir = project_root / "src"
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
 
 from p_audio.config import PAudioConfig
 from p_audio.pipeline import PAudioPipeline

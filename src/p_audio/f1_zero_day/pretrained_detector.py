@@ -6,11 +6,12 @@ import torch
 class PretrainedAntiSpoofDetector:
     """
     Adapter for Pretrained Audio Anti-Spoofing / Synthetic Speech Detector.
-    Evaluates audio signal and produces known_generator_similarity score (0.0 to 1.0).
-    Includes safe offline acoustic fallback if neural model fails to load.
+    Evaluates audio signals using a fine-tuned deepfake/anti-spoofing checkpoint
+    (e.g., ASVspoof fine-tuned Wav2Vec2/XLSR model) or robust acoustic fallback.
+    Produces a normalized synthetic_pattern_score between 0.0 and 1.0.
     """
 
-    def __init__(self, model_name: str = "facebook/wav2vec2-base"):
+    def __init__(self, model_name: str = "mohammedgaber/wav2vec2-large-xlsr-53-anti-spoofing"):
         self.model_name = model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = None
@@ -19,7 +20,7 @@ class PretrainedAntiSpoofDetector:
         self.use_offline_fallback = False
 
     def load_model(self):
-        """Attempts to load Wav2Vec2 / pretrained speech feature model."""
+        """Attempts to load fine-tuned anti-spoofing model checkpoint."""
         try:
             from transformers import AutoFeatureExtractor, AutoModelForAudioClassification
             self.feature_extractor = AutoFeatureExtractor.from_pretrained(self.model_name)
@@ -27,16 +28,16 @@ class PretrainedAntiSpoofDetector:
             self.model.to(self.device)
             self.model.eval()
             self.is_loaded = True
-            print(f"[Pretrained Detector] Loaded HuggingFace model: {self.model_name}")
+            print(f"[Pretrained Detector] Successfully loaded anti-spoofing classifier: {self.model_name}")
         except Exception as e:
-            print(f"[Pretrained Detector] Failed to load {self.model_name} online ({e}). Using offline acoustic anti-spoof fallback model.")
+            print(f"[Pretrained Detector] Note: Could not load '{self.model_name}' online ({e}). Operating in offline acoustic representation fallback mode.")
             self.use_offline_fallback = True
             self.is_loaded = True
 
     def predict_similarity(self, y: np.ndarray, sr: int) -> Tuple[float, Dict[str, Any]]:
         """
-        Computes known-generator similarity score (0.0 = low similarity, 1.0 = high similarity / known fake).
-        Returns (similarity_score, debug_details).
+        Computes synthetic pattern similarity score (0.0 = low synthetic similarity, 1.0 = high synthetic similarity).
+        Returns (score, debug_details). Note: This is an uncalibrated model score, not a posterior probability.
         """
         if not self.is_loaded:
             self.load_model()
@@ -52,26 +53,30 @@ class PretrainedAntiSpoofDetector:
                 logits = self.model(input_values).logits
                 probs = torch.softmax(logits, dim=-1)[0].cpu().numpy()
 
-            # If classification model returns multi-class probabilities, use max non-speech/fake prob
-            # For general feature model, compute energy variance & neural embedding deviation score
-            similarity_score = float(np.max(probs)) if len(probs) > 1 else float(probs[0])
-            similarity_score = float(np.clip(similarity_score, 0.0, 1.0))
+            # For binary anti-spoof classifiers (index 0 = bonafide, index 1 = spoof/fake):
+            if len(probs) >= 2:
+                # Assuming index 1 corresponds to spoof/synthetic class
+                synthetic_score = float(probs[1])
+            else:
+                synthetic_score = float(probs[0])
+
+            synthetic_score = float(np.clip(synthetic_score, 0.0, 1.0))
 
             details = {
                 "model_name": self.model_name,
-                "mode": "neural_hf",
-                "similarity_score": similarity_score
+                "mode": "fine_tuned_anti_spoof_neural",
+                "synthetic_pattern_score": synthetic_score,
+                "is_calibrated_probability": False
             }
-            return similarity_score, details
+            return synthetic_score, details
         except Exception as e:
-            print(f"[Pretrained Detector] Neural inference error ({e}). Falling back to acoustic anti-spoof model.")
+            print(f"[Pretrained Detector] Neural inference fallback ({e}). Using offline acoustic anti-spoof model.")
             return self._offline_acoustic_similarity(y, sr)
 
     def _offline_acoustic_similarity(self, y: np.ndarray, sr: int) -> Tuple[float, Dict[str, Any]]:
         """
-        Acoustic heuristic for synthetic voice artifacts:
-        Analyzes high frequency phase discontinuities, spectral unnaturalness,
-        and lack of micro-tremor variance common in neural vocoders.
+        Offline acoustic representation fallback analyzing high-frequency spectral flatness,
+        phase continuity, and micro-tremor variance common in neural vocoders.
         """
         import librosa
         # 1. High frequency power ratio (> 6 kHz)
@@ -91,9 +96,10 @@ class PretrainedAntiSpoofDetector:
 
         details = {
             "model_name": self.model_name,
-            "mode": "offline_acoustic_fallback",
-            "hf_ratio": hf_ratio,
-            "flatness_std": flatness_std,
-            "similarity_score": synth_indicator
+            "mode": "offline_acoustic_representation",
+            "hf_ratio": round(float(hf_ratio), 4),
+            "flatness_std": round(float(flatness_std), 4),
+            "synthetic_pattern_score": round(float(synth_indicator), 4),
+            "is_calibrated_probability": False
         }
         return synth_indicator, details

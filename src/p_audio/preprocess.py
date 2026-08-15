@@ -9,7 +9,10 @@ import librosa
 import numpy as np
 import soundfile as sf
 
-from src.p_audio.config import PAudioConfig
+try:
+    from p_audio.config import PAudioConfig
+except ImportError:
+    from src.p_audio.config import PAudioConfig
 
 
 @dataclass

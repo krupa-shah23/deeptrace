@@ -16,7 +16,8 @@ class PAudioConfig:
     f1_model_path: Path = field(
         default_factory=lambda: Path("models/f1_one_class_svm.joblib")
     )
-    pretrained_model_name: str = "facebook/wav2vec2-base"
+    # Dedicated anti-spoofing checkpoint (trained on ASVspoof / synthetic audio detection)
+    pretrained_model_name: str = "mohammedgaber/wav2vec2-large-xlsr-53-anti-spoofing"
     f1_similarity_threshold_high: float = 0.70
     f1_similarity_threshold_med: float = 0.40
     f1_consistency_threshold_high: float = 0.0  # OC-SVM score >= 0

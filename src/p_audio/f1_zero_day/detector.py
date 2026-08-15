@@ -3,19 +3,26 @@ from typing import Dict, Any, Optional, Tuple
 
 import numpy as np
 
-from src.p_audio.config import PAudioConfig
-from src.p_audio.f1_zero_day.model import OneClassSVMDetector
-from src.p_audio.f1_zero_day.pretrained_detector import PretrainedAntiSpoofDetector
-from src.p_audio.features import AudioFeatures
-from src.p_audio.preprocess import PreprocessedAudio
+try:
+    from p_audio.config import PAudioConfig
+    from p_audio.f1_zero_day.model import OneClassSVMDetector
+    from p_audio.f1_zero_day.pretrained_detector import PretrainedAntiSpoofDetector
+    from p_audio.features import AudioFeatures
+    from p_audio.preprocess import PreprocessedAudio
+except ImportError:
+    from p_audio.config import PAudioConfig
+    from p_audio.f1_zero_day.model import OneClassSVMDetector
+    from p_audio.f1_zero_day.pretrained_detector import PretrainedAntiSpoofDetector
+    from p_audio.features import AudioFeatures
+    from p_audio.preprocess import PreprocessedAudio
 
 
 class F1ZeroDayDetector:
     """
     F1 — Zero-Day / Unknown-Generator Synthetic Audio Detector.
     Combines:
-    1. Pretrained Anti-Spoofing Detector (known generator similarity)
-    2. One-Class SVM trained on genuine human speech (natural speech consistency)
+    1. Pretrained Anti-Spoofing Detector (known generator similarity / synthetic pattern score)
+    2. One-Class SVM trained strictly on genuine human speech (natural speech consistency score)
     """
 
     def __init__(self, config: Optional[PAudioConfig] = None):
@@ -37,13 +44,14 @@ class F1ZeroDayDetector:
                 print(f"[F1 Detector] Failed to load One-Class SVM model ({e}). Will use dynamic baseline.")
                 self.oc_svm_detector = None
         else:
-            print(f"[F1 Detector] No pre-trained One-Class SVM found at {model_path}. Model training script can be run to generate model file.")
+            print(f"[F1 Detector] No pre-trained One-Class SVM found at {model_path}. Run train_f1.py to generate artifact.")
             self.oc_svm_detector = None
 
     def analyze(self, preprocessed: PreprocessedAudio, features: AudioFeatures) -> Dict[str, Any]:
         """
         Executes F1 Zero-Day analysis on preprocessed audio clip.
         Returns structured JSON result matching P-Fusion interface contract.
+        Note: Output 'confidence' is a normalized score between 0.0 and 1.0, not a calibrated Bayesian probability.
         """
         if not preprocessed.usable or preprocessed.audio is None:
             return {
@@ -54,7 +62,7 @@ class F1ZeroDayDetector:
                 "reason": preprocessed.reason
             }
 
-        # 1. Pretrained Anti-Spoofing Model Score
+        # 1. Pretrained Anti-Spoofing Model Score / Synthetic Pattern Score
         sim_score, pretrained_details = self.pretrained_detector.predict_similarity(
             preprocessed.audio, preprocessed.sr
         )
@@ -85,9 +93,9 @@ class F1ZeroDayDetector:
                 consistency_score = 0.20
                 raw_oc_score = -0.5
 
-        if consistency_score >= 0.65:
+        if consistency_score >= 0.50:
             nat_speech_cons = "HIGH"
-        elif consistency_score >= 0.40:
+        elif consistency_score >= 0.35:
             nat_speech_cons = "MED"
         else:
             nat_speech_cons = "LOW"
@@ -113,9 +121,10 @@ class F1ZeroDayDetector:
             "verdict": verdict,
             "confidence": confidence,
             "details": {
-                "similarity_score_raw": round(float(sim_score), 4),
+                "synthetic_pattern_score_raw": round(float(sim_score), 4),
                 "consistency_score_raw": round(float(consistency_score), 4),
                 "oc_svm_raw_score": round(float(raw_oc_score), 4),
+                "is_calibrated_probability": False,
                 "pretrained_model": pretrained_details
             }
         }
