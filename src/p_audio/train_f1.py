@@ -3,10 +3,13 @@ import os
 import sys
 from pathlib import Path
 
-# Add project root to sys.path
+# Add project root and src to sys.path
 project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+src_dir = project_root / "src"
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
 
 import numpy as np
 import soundfile as sf
@@ -17,10 +20,10 @@ try:
     from p_audio.features import extract_all_audio_features
     from p_audio.preprocess import load_and_preprocess_audio
 except ImportError:
-    from src.p_audio.config import PAudioConfig
-    from src.p_audio.f1_zero_day.model import OneClassSVMDetector
-    from src.p_audio.features import extract_all_audio_features
-    from src.p_audio.preprocess import load_and_preprocess_audio
+    from p_audio.config import PAudioConfig
+    from p_audio.f1_zero_day.model import OneClassSVMDetector
+    from p_audio.features import extract_all_audio_features
+    from p_audio.preprocess import load_and_preprocess_audio
 
 
 def generate_synthetic_real_speech_sample(file_path: str, duration_sec: float = 3.5, sr: int = 16000, seed: int = 0):
