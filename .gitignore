@@ -1,0 +1,19 @@
+# Python / uv
+.venv/
+__pycache__/
+*.pyc
+
+# datasets — too large, download separately per README instructions
+data/ff++/
+data/celeb-df/
+
+# generated at runtime, not source
+data/generated_variants/
+output/
+
+# keep these though — they're small and needed by teammates
+!data/seed_clips/
+
+# OS junk
+.DS_Store
+Thumbs.db
