@@ -17,3 +17,9 @@ output/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# large media files - never commit these
+*.mp4
+*.avi
+*.wav
+!data/seed_clips/.gitkeep
