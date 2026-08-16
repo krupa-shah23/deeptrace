@@ -12,7 +12,7 @@ import soundfile as sf
 try:
     from p_audio.config import PAudioConfig
 except ImportError:
-    from src.p_audio.config import PAudioConfig
+    from p_audio.config import PAudioConfig
 
 
 @dataclass

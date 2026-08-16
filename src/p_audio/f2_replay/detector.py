@@ -7,9 +7,9 @@ try:
     from p_audio.features import AudioFeatures
     from p_audio.preprocess import PreprocessedAudio
 except ImportError:
-    from src.p_audio.config import PAudioConfig
-    from src.p_audio.features import AudioFeatures
-    from src.p_audio.preprocess import PreprocessedAudio
+    from p_audio.config import PAudioConfig
+    from p_audio.features import AudioFeatures
+    from p_audio.preprocess import PreprocessedAudio
 
 
 class F2ReplayDetector:

@@ -8,10 +8,10 @@ project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.p_audio.config import PAudioConfig
-from src.p_audio.f2_replay.detector import F2ReplayDetector
-from src.p_audio.features import extract_all_audio_features
-from src.p_audio.preprocess import load_and_preprocess_audio
+from p_audio.config import PAudioConfig
+from p_audio.f2_replay.detector import F2ReplayDetector
+from p_audio.features import extract_all_audio_features
+from p_audio.preprocess import load_and_preprocess_audio
 
 
 def main():

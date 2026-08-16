@@ -9,7 +9,7 @@ class PAudioConfig:
 
     # Preprocessing settings
     target_sr: int = 16000
-    min_duration_sec: float = 2.0
+    min_duration_sec: float = 1.0
     vad_top_db: int = 30  # Threshold below peak considered silence for VAD
 
     # F1 Model paths & thresholds (Zero-Day / Unknown Generator)

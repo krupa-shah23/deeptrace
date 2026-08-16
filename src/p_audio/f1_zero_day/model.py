@@ -58,10 +58,21 @@ class OneClassSVMDetector:
         feature_vector_scaled = self.scaler.transform(feature_vector)
         raw_score = float(self.svm.decision_function(feature_vector_scaled)[0])
 
+        # Handle RBF kernel asymptotic saturation (where K(x, xi) -> 0 and decision_function clamps to -offset_)
+        if hasattr(self.svm, "offset_") and hasattr(self.svm, "support_vectors_") and len(self.svm.support_vectors_) > 0:
+            offset = float(self.svm.offset_[0])
+            if abs(raw_score + offset) < 1e-4:
+                sv_dists = np.linalg.norm(self.svm.support_vectors_ - feature_vector_scaled, axis=1)
+                min_dist = float(np.min(sv_dists))
+                sv_radii = np.linalg.norm(self.svm.support_vectors_, axis=1)
+                r_sv = float(np.mean(sv_radii)) if len(sv_radii) > 0 and np.mean(sv_radii) > 1e-6 else 1.0
+                raw_score = float(-offset - (min_dist / r_sv))
+
         # Sigmoid mapping for smooth score between 0.0 and 1.0
         # Positive raw_score -> > 0.5 (consistent with real speech)
         # Negative raw_score -> < 0.5 (anomaly signal / synthetic speech characteristic)
-        consistency_score = float(1.0 / (1.0 + np.exp(-2.0 * raw_score)))
+        scale_factor = 0.1 if raw_score < -1.0 else 2.0
+        consistency_score = float(1.0 / (1.0 + np.exp(-scale_factor * raw_score)))
 
         return raw_score, consistency_score
 

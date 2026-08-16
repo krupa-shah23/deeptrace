@@ -26,14 +26,14 @@ try:
     from p_audio.pipeline import PAudioPipeline
     from p_audio.preprocess import load_and_preprocess_audio
 except ImportError:
-    from src.p_audio.config import PAudioConfig
-    from src.p_audio.f1_zero_day.detector import F1ZeroDayDetector
-    from src.p_audio.f1_zero_day.model import OneClassSVMDetector
-    from src.p_audio.f1_zero_day.pretrained_detector import PretrainedAntiSpoofDetector
-    from src.p_audio.f2_replay.detector import F2ReplayDetector
-    from src.p_audio.features import extract_all_audio_features, safe_nan_clean
-    from src.p_audio.pipeline import PAudioPipeline
-    from src.p_audio.preprocess import load_and_preprocess_audio
+    from p_audio.config import PAudioConfig
+    from p_audio.f1_zero_day.detector import F1ZeroDayDetector
+    from p_audio.f1_zero_day.model import OneClassSVMDetector
+    from p_audio.f1_zero_day.pretrained_detector import PretrainedAntiSpoofDetector
+    from p_audio.f2_replay.detector import F2ReplayDetector
+    from p_audio.features import extract_all_audio_features, safe_nan_clean
+    from p_audio.pipeline import PAudioPipeline
+    from p_audio.preprocess import load_and_preprocess_audio
 
 
 @pytest.fixture
@@ -95,10 +95,10 @@ def replayed_wav(temp_dir):
 
 @pytest.fixture
 def short_speech_wav(temp_dir):
-    """Generates a 1.0-second speech clip (below 2.0s forensic minimum duration)."""
+    """Generates a 0.5-second speech clip (below 1.0s forensic minimum duration)."""
     file_path = temp_dir / "short_speech.wav"
     sr = 16000
-    t = np.linspace(0, 1.0, int(sr * 1.0))
+    t = np.linspace(0, 0.5, int(sr * 0.5))
     y = np.sin(2 * np.pi * 200 * t)
     sf.write(file_path, y, sr)
     return str(file_path)

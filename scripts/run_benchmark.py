@@ -16,8 +16,8 @@ try:
     from p_audio.train_f1 import train_f1_one_class_svm
     from p_audio.f1_zero_day.pretrained_detector import PretrainedAntiSpoofDetector
 except ImportError:
-    from src.p_audio.train_f1 import train_f1_one_class_svm
-    from src.p_audio.f1_zero_day.pretrained_detector import PretrainedAntiSpoofDetector
+    from p_audio.train_f1 import train_f1_one_class_svm
+    from p_audio.f1_zero_day.pretrained_detector import PretrainedAntiSpoofDetector
 
 from scripts.verify_datasets import verify_manifest
 from scripts.calibrate_f1 import calibrate_f1

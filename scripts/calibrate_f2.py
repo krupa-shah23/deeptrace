@@ -21,10 +21,10 @@ try:
     from p_audio.features import extract_all_audio_features
     from p_audio.preprocess import load_and_preprocess_audio
 except ImportError:
-    from src.p_audio.config import PAudioConfig
-    from src.p_audio.f2_replay.detector import F2ReplayDetector
-    from src.p_audio.features import extract_all_audio_features
-    from src.p_audio.preprocess import load_and_preprocess_audio
+    from p_audio.config import PAudioConfig
+    from p_audio.f2_replay.detector import F2ReplayDetector
+    from p_audio.features import extract_all_audio_features
+    from p_audio.preprocess import load_and_preprocess_audio
 
 
 def calibrate_f2(output_json: str = "models/f2_calibration.json", mode: str = "benchmark") -> Dict[str, Any]:

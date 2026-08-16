@@ -667,6 +667,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "cryptography" },
     { name = "ffmpeg-python" },
+    { name = "huggingface-hub" },
     { name = "imagehash" },
     { name = "jinja2" },
     { name = "librosa", version = "0.11.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -691,6 +692,7 @@ dependencies = [
 requires-dist = [
     { name = "cryptography", specifier = ">=50.0.0" },
     { name = "ffmpeg-python", specifier = ">=0.2.0" },
+    { name = "huggingface-hub", specifier = ">=1.27.0" },
     { name = "imagehash", specifier = ">=4.3.2" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "librosa", specifier = ">=0.11.0" },
