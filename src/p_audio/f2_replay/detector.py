@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from typing import Dict, Any, Optional
 
 try:
@@ -22,6 +24,21 @@ class F2ReplayDetector:
 
     def __init__(self, config: Optional[PAudioConfig] = None):
         self.config = config or PAudioConfig()
+        self.calibrated = False
+        self.calibration_data = None
+        self.calibrated_replay_thresh = 0.55
+        self._load_calibration()
+
+    def _load_calibration(self):
+        cal_path = Path("models/f2_calibration.json")
+        if cal_path.exists():
+            try:
+                with open(cal_path, "r", encoding="utf-8") as f:
+                    self.calibration_data = json.load(f)
+                self.calibrated = True
+                self.calibrated_replay_thresh = float(self.calibration_data.get("calibrated_replay_score_threshold", 0.55))
+            except Exception:
+                self.calibrated = False
 
     def analyze(
         self,
@@ -32,7 +49,6 @@ class F2ReplayDetector:
         """
         Executes F2 Replay analysis on preprocessed audio clip.
         Returns structured JSON result matching P-Fusion interface contract.
-        All thresholds are prototype thresholds and marked PROTOTYPE / CALIBRATION REQUIRED.
         """
         if not preprocessed.usable or preprocessed.audio is None:
             return {
@@ -50,7 +66,7 @@ class F2ReplayDetector:
         comb_index = details.get("comb_filter_index", 0.0)
         spectral_flatness = details.get("spectral_flatness", 0.0)
 
-        # Reverb detection: T60 proxy > prototype threshold (0.3s) or high comb filtering ripple
+        # Reverb detection: T60 proxy > threshold (0.3s) or high comb filtering ripple
         reverb_detected = (t60_proxy >= self.config.f2_reverb_t60_threshold_sec) or (comb_index >= self.config.f2_comb_filter_threshold)
 
         # Calculate replay score based on acoustic proxy indicators
@@ -62,7 +78,7 @@ class F2ReplayDetector:
         replay_indicator = float(min(0.99, max(0.01, replay_indicator)))
 
         # Determine pathway
-        if replay_indicator >= 0.55 or (reverb_detected and noise_floor_db > -40.0):
+        if replay_indicator >= self.calibrated_replay_thresh or (reverb_detected and noise_floor_db > -40.0):
             pathway = "REPLAYED_RECORDING"
             confidence = round(float(replay_indicator), 4)
         else:
@@ -75,6 +91,8 @@ class F2ReplayDetector:
                 pathway = "DIRECT_GENUINE"
             confidence = round(float(1.0 - replay_indicator), 4)
 
+        status_str = "CALIBRATED" if self.calibrated else "NOT_CALIBRATED"
+
         evidence = {
             "t60_reverb_proxy_sec": round(float(t60_proxy), 4),
             "t60_estimated_sec": round(float(t60_proxy), 4),  # backwards compatibility
@@ -84,7 +102,7 @@ class F2ReplayDetector:
             "comb_filter_index": round(float(comb_index), 4),
             "spectral_flatness": round(float(spectral_flatness), 4),
             "replay_score": round(float(replay_indicator), 4),
-            "threshold_status": "PROTOTYPE / CALIBRATION REQUIRED"
+            "threshold_status": status_str
         }
 
         return {

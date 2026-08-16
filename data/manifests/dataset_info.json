@@ -1,0 +1,53 @@
+{
+  "provenance_records": {
+    "vctk": {
+      "dataset_name": "CSTR VCTK Corpus",
+      "version": "0.92",
+      "official_source": "https://doi.org/10.7488/ds/2645",
+      "purpose": "Genuine human speech baseline for F1 / One-Class SVM training and evaluation",
+      "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      "expected_sample_rate": 48000,
+      "target_sample_rate": 16000,
+      "audio_format": "FLAC / WAV",
+      "speaker_disjoint_supported": true
+    },
+    "asvspoof2019_la": {
+      "dataset_name": "ASVspoof 2019 Logical Access (LA)",
+      "version": "1.0",
+      "official_source": "https://www.asvspoof.org/index2019.html",
+      "purpose": "Labeled synthetic/spoofed speech for F1 known-attack and zero-day attack evaluation",
+      "license": "ASVspoof 2019 Data License",
+      "expected_sample_rate": 16000,
+      "target_sample_rate": 16000,
+      "audio_format": "FLAC",
+      "attack_types": {
+        "known_train_dev": ["A01", "A02", "A03", "A04", "A05", "A06"],
+        "unseen_zero_day_eval": ["A07", "A08", "A09", "A10", "A11", "A12", "A13", "A14", "A15", "A16", "A17", "A18", "A19"]
+      },
+      "speaker_disjoint_supported": true
+    },
+    "asvspoof2019_pa": {
+      "dataset_name": "ASVspoof 2019 Physical Access (PA)",
+      "version": "1.0",
+      "official_source": "https://www.asvspoof.org/index2019.html",
+      "purpose": "Physical-world re-recording and acoustic replay evaluation for F2",
+      "license": "ASVspoof 2019 Data License",
+      "expected_sample_rate": 16000,
+      "target_sample_rate": 16000,
+      "audio_format": "FLAC",
+      "replay_configurations": {
+        "room_sizes": ["A", "B", "C"],
+        "reverberation_times_t60": ["0.2s - 0.9s"],
+        "talker_to_mic_distances": ["10cm - 100cm"]
+      },
+      "speaker_disjoint_supported": true
+    },
+    "local_demo_samples": {
+      "dataset_name": "Local Synthetic Real-Speech Proxies",
+      "provenance": "PROVENANCE_UNKNOWN / LOCAL_SYNTHETIC_PROXIES",
+      "purpose": "Demo / unit smoke testing ONLY",
+      "benchmark_usable": false,
+      "note": "Generated at runtime for developer testing. Must NEVER be used as benchmark evidence."
+    }
+  }
+}

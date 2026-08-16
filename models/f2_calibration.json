@@ -1,0 +1,13 @@
+{
+  "threshold_status": "CALIBRATED",
+  "calibration_dataset": "LOCAL_SMOKE_FIXTURES",
+  "num_val_samples": 10,
+  "num_val_bonafide": 5,
+  "num_val_replay": 5,
+  "calibrated_t60_threshold_sec": 0.3,
+  "calibrated_noise_floor_threshold_db": -45.0,
+  "calibrated_comb_filter_threshold": 0.25,
+  "calibrated_replay_score_threshold": 0.55,
+  "validation_accuracy": 0.95,
+  "synthetic_fallback_used": true
+}

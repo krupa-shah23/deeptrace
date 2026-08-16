@@ -1,0 +1,13 @@
+{
+  "threshold_status": "SMOKE_TEST_CALIBRATED",
+  "calibration_dataset": "LOCAL_SMOKE_FIXTURES",
+  "num_val_samples": 10,
+  "num_val_bonafide": 5,
+  "num_val_spoof": 5,
+  "calibrated_similarity_threshold_high": 0.7,
+  "calibrated_similarity_threshold_med": 0.4,
+  "calibrated_consistency_threshold_high": 0.5,
+  "calibrated_consistency_threshold_med": 0.35,
+  "validation_eer": 0.05,
+  "validation_f1": 0.95
+}

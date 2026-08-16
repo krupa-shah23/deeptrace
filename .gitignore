@@ -7,6 +7,8 @@ __pycache__/
 data/ff++/
 data/celeb-df/
 data/audio/
+data/datasets/
+data/generated/
 models/*.joblib
 
 # generated at runtime, not source
@@ -15,6 +17,7 @@ output/
 
 # keep these though — they're small and needed by teammates
 !data/seed_clips/
+!data/manifests/
 
 # OS junk
 .DS_Store

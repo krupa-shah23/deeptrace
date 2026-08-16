@@ -39,7 +39,7 @@ The **P-Audio** module provides forensic audio authentication for DeepTrace (SIH
 
 ### F1 — Zero-Day / Unknown-Generator Synthetic Audio Detection
 F1 combines two complementary signals:
-1. **Pretrained Anti-Spoofing Model**: Computes similarity score against known synthetic vocoder / TTS generation patterns using a HuggingFace audio model or robust acoustic feature embedding baseline.
+1. **Pretrained Anti-Spoofing Model**: Computes similarity score against known synthetic vocoder / TTS generation patterns using a fine-tuned neural model or robust acoustic feature embedding baseline.
 2. **One-Class SVM Novelty Detector**: Trained **strictly on genuine human speech** features (MFCCs, LFCCs, PYIN F0 pitch statistics, micro-tremor jitter, shimmer, and STFT phase continuity). Audio that strays outside the learned real-speech distribution is flagged as an anomaly.
 
 **Verdicts produced by F1:**
@@ -52,7 +52,7 @@ F1 combines two complementary signals:
 F2 measures acoustic properties introduced when audio is played through a physical speaker into a room and re-recorded with a microphone:
 - **T60 Reverberation Time Proxy**: Schroeder backward integration energy decay curve slope.
 - **Noise Floor & SNR**: Minimum 10th-percentile spectral frame energy vs active speech energy.
-- **Comb Filtering Index**: Autocorrelation of magnitude spectrum peaks to detect periodic acoustic reflections.
+- **Comb Filtering Index**: Autocorrelation of magnitude spectrum residual peaks to detect periodic room reflections.
 - **Spectral Flatness & Rolloff**: High-frequency acoustic attenuation.
 
 **Pathways produced by F2:**
@@ -63,36 +63,66 @@ F2 measures acoustic properties introduced when audio is played through a physic
 
 ---
 
-## Usage
+## Benchmark Methodology & Real Dataset Setup
 
-### 1. Synchronize Dependencies
+> [!IMPORTANT]
+> **The benchmark does not use generated placeholder audio.**  
+> Benchmark evaluation requires official public datasets (VCTK for real speech baseline, ASVspoof 2019 LA for synthetic/spoofed speech, and ASVspoof 2019 PA for physical replay). If real datasets are missing, benchmark mode **fails loudly** rather than fabricating fake numbers.
+
+### 1. Public Dataset Sources & Provenance
+
+- **VCTK Corpus (0.92)**: Genuine human speech baseline for One-Class SVM training and evaluation.
+- **ASVspoof 2019 LA**: Labeled synthetic/spoofed speech for F1 known-attack (`A01-A06`) and zero-day held-out attack (`A07-A19`) evaluation.
+- **ASVspoof 2019 PA**: Physical-world re-recording and acoustic replay evaluation for F2.
+
+### 2. Dataset Preparation & Manifest Setup
+
+To setup and parse public datasets:
 ```powershell
-uv sync
+# 1. Download official dataset release archives
+uv run python scripts/prepare_datasets.py --download
+
+# 2. Build machine-readable CSV manifests & metadata
+uv run python scripts/build_manifests.py
+
+# 3. Verify dataset health and speaker-disjoint constraint
+uv run python scripts/verify_datasets.py
 ```
 
-### 2. Train F1 One-Class SVM Baseline
-```powershell
-uv run python src/p_audio/train_f1.py --data-dir data/audio/real --out-model models/f1_one_class_svm.joblib
-```
-*(If `data/audio/real` is empty, the training script automatically generates clean synthetic baseline speech samples to fit the One-Class SVM baseline out-of-the-box.)*
+### 3. Speaker-Disjoint Policy & Zero-Leakage Guarantee
+- **Train Split**: Genuine real human speech from `Train` speakers ONLY.
+- **Val Split**: Genuine + Spoof speech from `Val` speakers (used strictly for threshold calibration).
+- **Test Split**: Genuine + Spoof speech from `Test` speakers (completely speaker-disjoint; 0 speaker overlap with Train).
 
-### 3. Run Complete P-Audio Pipeline
+### 4. Zero-Day Evaluation Strategy
+ASVspoof 2019 LA contains distinct attack types:
+- **Known Attacks (`A01-A06`)**: Present in training/dev protocols.
+- **Zero-Day Held-Out Attacks (`A07-A19`)**: Present ONLY in evaluation test protocol.
+The evaluation script reports accuracy separately for known vs zero-day attacks.
+
+### 5. Running Full End-to-End Benchmark
+```powershell
+uv run python scripts/run_benchmark.py --mode benchmark
+```
+Outputs machine-readable metrics (`output/benchmark/f1_metrics.json`, `f2_metrics.json`, `per_attack_results.csv`) and human-readable Markdown report (`output/benchmark/benchmark_report.md`).
+
+---
+
+## Demo & Developer Smoke Testing
+
+For single-file inference or quick developer tests without downloading full benchmark datasets:
+
+### 1. Run Complete Pipeline on Single Clip
 ```powershell
 uv run python scripts/run_audio.py path/to/suspect_audio.wav
 ```
-*(Supports `.wav`, `.mp3`, `.flac`, `.m4a`, `.mp4`, `.mkv` files. Outputs formatted JSON to stdout and writes to `output/audio_results/<clip_id>.json`.)*
 
-### 4. Run F1 Standalone Script
+### 2. Run Smoke-Test Benchmark
 ```powershell
-uv run python src/p_audio/zero_day_detection.py --input path/to/audio.wav --out output/f1_result.json
+uv run python scripts/run_benchmark.py --mode smoke-test
 ```
 
-### 5. Run F2 Standalone Script
-```powershell
-uv run python src/p_audio/replay_detection.py --input path/to/audio.wav --out output/f2_result.json
-```
-
-### 6. Run Test Suite
+### 3. Run Unit Test Suite
 ```powershell
 uv run pytest tests/test_p_audio.py
 ```
@@ -131,14 +161,19 @@ uv run pytest tests/test_p_audio.py
     "f1_details": {
       "similarity_score_raw": 0.1706,
       "consistency_score_raw": 0.8166,
-      "oc_svm_raw_score": 0.7466
+      "oc_svm_raw_score": 0.7466,
+      "pretrained_model": {
+        "model_name": "mohammedgaber/wav2vec2-large-xlsr-53-anti-spoofing",
+        "mode": "fine_tuned_anti_spoof_neural"
+      }
     },
     "f2_evidence": {
       "t60_estimated_sec": 0.05,
       "t60_threshold_sec": 0.3,
       "noise_floor_db": -60.0,
       "snr_db": 30.0,
-      "comb_filter_index": 0.04
+      "comb_filter_index": 0.04,
+      "threshold_status": "CALIBRATED"
     },
     "processing_time_sec": 0.184
   }
