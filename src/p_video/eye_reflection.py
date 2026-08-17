@@ -437,7 +437,7 @@ if __name__ == "__main__":
 
     output = {
         "feature": "eye_reflection_consistency",
-        "frames_with_usable_eyes": frames_with_usable_eyes_pct,
+        "frames_with_usable_eyes": int(round(frames_with_usable_eyes_pct)),
         "catchlight_mismatch_flagged_frames": flagged_frames,
         "mismatch_rate": mismatch_rate_out,
         "verdict": verdict_out,
